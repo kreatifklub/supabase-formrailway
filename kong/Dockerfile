@@ -1,6 +1,12 @@
 FROM kong:2.8.1
-COPY ./kong.yml /home/kong/temp.yml
+
 USER 0
-RUN apk update && apk add gettext
+
+RUN apk add --no-cache gettext
+
+COPY ./kong.yml /home/kong/temp.yml
+RUN chown kong:kong /home/kong/temp.yml
+
 USER kong
-ENTRYPOINT bash -c 'envsubst < ~/temp.yml > ~/kong.yml && /docker-entrypoint.sh kong docker-start'
+
+ENTRYPOINT /bin/sh -c "envsubst < /home/kong/temp.yml > /home/kong/kong.yml && exec /docker-entrypoint.sh kong docker-start"
