@@ -155,3 +155,12 @@ services:
         config:
           allow:
             - admin
+
+- name: studio
+  url: http://${STUDIO_HOST}:3000
+  routes:
+    - name: studio-root
+      paths:
+        - /
+  plugins:
+    - name: basic-auth
