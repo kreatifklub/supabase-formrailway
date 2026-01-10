@@ -1,10 +1,21 @@
-# kong.yml
 _format_version: "2.1"
 _transform: true
 
+####################
+# Consumers
+####################
 consumers:
+  - username: dashboard
   - username: anon
   - username: service_role
+
+####################
+# Credentials
+####################
+basicauth_credentials:
+  - consumer: dashboard
+    username: ${DASHBOARD_USERNAME}
+    password: ${DASHBOARD_PASSWORD}
 
 keyauth_credentials:
   - consumer: anon
@@ -12,103 +23,90 @@ keyauth_credentials:
   - consumer: service_role
     key: ${SUPABASE_SERVICE_KEY}
 
+####################
+# ACL Groups
+####################
 acls:
   - consumer: anon
     group: anon
   - consumer: service_role
     group: admin
 
+####################
+# Services
+####################
 services:
-  # Open Auth routes
-  - name: auth-v1-open
-    url: http://${AUTH_HOST}:9999/verify
+
+  ####################
+  # Auth (public)
+  ####################
+  - name: auth-open
+    url: http://${AUTH_HOST}:9999
     routes:
-      - name: auth-v1-open
-        strip_path: true
-        paths:
-          - /auth/v1/verify
+      - paths: [/auth/v1/verify, /auth/v1/callback, /auth/v1/authorize]
     plugins:
       - name: cors
 
-  - name: auth-v1-open-callback
-    url: http://${AUTH_HOST}:9999/callback
+  ####################
+  # Auth (secured)
+  ####################
+  - name: auth-secure
+    url: http://${AUTH_HOST}:9999
     routes:
-      - name: auth-v1-open-callback
-        strip_path: true
-        paths:
-          - /auth/v1/callback
-    plugins:
-      - name: cors
-
-  - name: auth-v1-open-authorize
-    url: http://${AUTH_HOST}:9999/authorize
-    routes:
-      - name: auth-v1-open-authorize
-        strip_path: true
-        paths:
-          - /auth/v1/authorize
-    plugins:
-      - name: cors
-
-  # Secure Auth routes
-  - name: auth-v1
-    url: http://${AUTH_HOST}:9999/
-    routes:
-      - name: auth-v1-all
-        strip_path: true
-        paths:
-          - /auth/v1/
+      - paths: [/auth/v1/]
     plugins:
       - name: cors
       - name: key-auth
       - name: acl
         config:
-          allow: [admin, anon]
+          allow: [anon, admin]
 
-  # Secure REST routes
-  - name: rest-v1
-    url: http://${REST_HOST}:3000/
+  ####################
+  # REST
+  ####################
+  - name: rest
+    url: http://${REST_HOST}:3000
     routes:
-      - name: rest-v1-all
-        strip_path: true
-        paths:
-          - /rest/v1/
+      - paths: [/rest/v1/]
     plugins:
       - name: cors
       - name: key-auth
       - name: acl
         config:
-          allow: [admin, anon]
+          allow: [anon, admin]
 
-  # GraphQL
-  - name: graphql-v1
-    url: http://${REST_HOST}:3000/rpc/graphql
-    routes:
-      - name: graphql-v1-all
-        strip_path: true
-        paths:
-          - /graphql/v1
-    plugins:
-      - name: cors
-      - name: key-auth
-      - name: request-transformer
-        config:
-          add:
-            headers:
-              - "Content-Profile: graphql_public"
-      - name: acl
-        config:
-          allow: [admin, anon]
-
+  ####################
   # Realtime
-  - name: realtime-v1
-    url: http://${REALTIME_HOST}:4000/
+  ####################
+  - name: realtime
+    url: http://${REALTIME_HOST}:4000
     routes:
-      - name: realtime-v1-all
-        strip_path: true
-        paths:
-          - /realtime/v1/
+      - paths: [/realtime/v1/]
     plugins:
       - name: cors
       - name: key-auth
       - name: acl
+        config:
+          allow: [anon, admin]
+
+  ####################
+  # Storage
+  ####################
+  - name: storage
+    url: http://${STORAGE_HOST}:5000
+    routes:
+      - paths: [/storage/v1/]
+    plugins:
+      - name: cors
+
+  ####################
+  # Postgres Meta
+  ####################
+  - name: meta
+    url: http://${META_HOST}:8080
+    routes:
+      - paths: [/pg/]
+    plugins:
+      - name: key-auth
+      - name: acl
+        config:
