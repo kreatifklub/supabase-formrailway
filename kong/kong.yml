@@ -2,17 +2,9 @@
 _format_version: "2.1"
 _transform: true
 
-# Declare your consumers (users)
 consumers:
-  - username: DASHBOARD
   - username: anon
   - username: service_role
-
-# Declare their credentials separately
-basicauth_credentials:
-  - consumer: DASHBOARD
-    username: ${DASHBOARD_USERNAME}
-    password: ${DASHBOARD_PASSWORD}
 
 keyauth_credentials:
   - consumer: anon
@@ -20,7 +12,6 @@ keyauth_credentials:
   - consumer: service_role
     key: ${SUPABASE_SERVICE_KEY}
 
-# ACL groups
 acls:
   - consumer: anon
     group: anon
@@ -70,14 +61,9 @@ services:
     plugins:
       - name: cors
       - name: key-auth
-        config:
-          hide_credentials: false
       - name: acl
         config:
-          hide_groups_header: true
-          allow:
-            - admin
-            - anon
+          allow: [admin, anon]
 
   # Secure REST routes
   - name: rest-v1
@@ -90,16 +76,11 @@ services:
     plugins:
       - name: cors
       - name: key-auth
-        config:
-          hide_credentials: true
       - name: acl
         config:
-          hide_groups_header: true
-          allow:
-            - admin
-            - anon
+          allow: [admin, anon]
 
-  # Secure GraphQL routes
+  # GraphQL
   - name: graphql-v1
     url: http://${REST_HOST}:3000/rpc/graphql
     routes:
@@ -110,26 +91,20 @@ services:
     plugins:
       - name: cors
       - name: key-auth
-        config:
-          hide_credentials: true
       - name: request-transformer
         config:
           add:
             headers:
-              - Content-Profile: graphql_public
+              - "Content-Profile: graphql_public"
       - name: acl
         config:
-          hide_groups_header: true
-          allow:
-            - admin
-            - anon
+          allow: [admin, anon]
 
-  # Secure Realtime routes (WebSocket)
-  - name: realtime-v1-ws
-    url: http://${REALTIME_HOST}:4000/socket
-    protocol: ws
+  # Realtime
+  - name: realtime-v1
+    url: http://${REALTIME_HOST}:4000/
     routes:
-      - name: realtime-v1-ws
+      - name: realtime-v1-all
         strip_path: true
         paths:
           - /realtime/v1/
@@ -137,76 +112,3 @@ services:
       - name: cors
       - name: key-auth
       - name: acl
-        config:
-          hide_groups_header: true
-          allow:
-            - admin
-            - anon
-
-  # Secure Realtime REST routes (HTTP)
-  - name: realtime-v1-rest
-    url: http://${REALTIME_HOST}:4000/api
-    routes:
-      - name: realtime-v1-rest
-        strip_path: true
-        paths:
-          - /realtime/v1/api
-    plugins:
-      - name: cors
-      - name: key-auth
-      - name: acl
-        config:
-          hide_groups_header: true
-          allow:
-            - admin
-            - anon
-
-  # Storage routes (no auth)
-  - name: storage-v1
-    url: http://${STORAGE_HOST}:5000/
-    routes:
-      - name: storage-v1-all
-        strip_path: true
-        paths:
-          - /storage/v1/
-    plugins:
-      - name: cors
-
-  # Analytics routes (if you run analytics)
-  - name: analytics-v1
-    url: http://${ANALYTICS_HOST}:4000/
-    routes:
-      - name: analytics-v1-all
-        strip_path: true
-        paths:
-          - /analytics/v1/
-
-  # Secure Database routes (Postgres Meta)
-  - name: meta
-    url: http://${META_HOST}:8080/
-    routes:
-      - name: meta-all
-        strip_path: true
-        paths:
-          - /pg/
-    plugins:
-      - name: key-auth
-      - name: acl
-        config:
-          hide_groups_header: true
-          allow:
-            - admin
-
-  # Supabase Studio dashboard
-  - name: dashboard
-    url: http://${STUDIO_HOST}:3000/
-    routes:
-      - name: dashboard-all
-        strip_path: true
-        paths:
-          - /
-    plugins:
-      # Attach Basic Auth only to the Studio dashboard
-      - name: basic-auth
-        config:
-          hide_credentials: true
