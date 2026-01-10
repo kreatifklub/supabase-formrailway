@@ -1,113 +1,157 @@
 _format_version: "2.1"
 _transform: true
 
-####################
+########################
 # Consumers
-####################
+########################
 consumers:
-  - username: dashboard
   - username: anon
   - username: service_role
 
-####################
-# Credentials
-####################
-basicauth_credentials:
-  - consumer: dashboard
-    username: ${DASHBOARD_USERNAME}
-    password: ${DASHBOARD_PASSWORD}
-
+########################
+# API Keys
+########################
 keyauth_credentials:
   - consumer: anon
     key: ${SUPABASE_ANON_KEY}
+
   - consumer: service_role
     key: ${SUPABASE_SERVICE_KEY}
 
-####################
-# ACL Groups
-####################
+########################
+# ACL groups
+########################
 acls:
   - consumer: anon
     group: anon
+
   - consumer: service_role
     group: admin
 
-####################
+########################
 # Services
-####################
+########################
 services:
 
-  ####################
-  # Auth (public)
-  ####################
+  # ---------- AUTH (open routes) ----------
   - name: auth-open
     url: http://${AUTH_HOST}:9999
     routes:
-      - paths: [/auth/v1/verify, /auth/v1/callback, /auth/v1/authorize]
+      - name: auth-open
+        paths:
+          - /auth/v1/token
+          - /auth/v1/authorize
+          - /auth/v1/verify
+          - /auth/v1/callback
     plugins:
       - name: cors
 
-  ####################
-  # Auth (secured)
-  ####################
+  # ---------- AUTH (secured routes) ----------
   - name: auth-secure
     url: http://${AUTH_HOST}:9999
     routes:
-      - paths: [/auth/v1/]
+      - name: auth-secure
+        paths:
+          - /auth/v1/
     plugins:
       - name: cors
       - name: key-auth
       - name: acl
         config:
-          allow: [anon, admin]
+          allow:
+            - anon
+            - admin
 
-  ####################
-  # REST
-  ####################
+  # ---------- REST ----------
   - name: rest
     url: http://${REST_HOST}:3000
     routes:
-      - paths: [/rest/v1/]
+      - name: rest
+        paths:
+          - /rest/v1/
     plugins:
       - name: cors
       - name: key-auth
       - name: acl
         config:
-          allow: [anon, admin]
+          allow:
+            - anon
+            - admin
 
-  ####################
-  # Realtime
-  ####################
-  - name: realtime
-    url: http://${REALTIME_HOST}:4000
+  # ---------- GRAPHQL ----------
+  - name: graphql
+    url: http://${REST_HOST}:3000/rpc/graphql
     routes:
-      - paths: [/realtime/v1/]
+      - name: graphql
+        paths:
+          - /graphql/v1
+    plugins:
+      - name: cors
+      - name: key-auth
+      - name: request-transformer
+        config:
+          add:
+            headers:
+              - Content-Profile:graphql_public
+      - name: acl
+        config:
+          allow:
+            - anon
+            - admin
+
+  # ---------- REALTIME WS ----------
+  - name: realtime-ws
+    url: http://${REALTIME_HOST}:4000/socket
+    protocol: ws
+    routes:
+      - name: realtime-ws
+        paths:
+          - /realtime/v1/
     plugins:
       - name: cors
       - name: key-auth
       - name: acl
         config:
-          allow: [anon, admin]
+          allow:
+            - anon
+            - admin
 
-  ####################
-  # Storage
-  ####################
+  # ---------- REALTIME REST ----------
+  - name: realtime-rest
+    url: http://${REALTIME_HOST}:4000/api
+    routes:
+      - name: realtime-rest
+        paths:
+          - /realtime/v1/api
+    plugins:
+      - name: cors
+      - name: key-auth
+      - name: acl
+        config:
+          allow:
+            - anon
+            - admin
+
+  # ---------- STORAGE ----------
   - name: storage
     url: http://${STORAGE_HOST}:5000
     routes:
-      - paths: [/storage/v1/]
+      - name: storage
+        paths:
+          - /storage/v1/
     plugins:
       - name: cors
 
-  ####################
-  # Postgres Meta
-  ####################
+  # ---------- POSTGRES META (Studio only) ----------
   - name: meta
     url: http://${META_HOST}:8080
     routes:
-      - paths: [/pg/]
+      - name: meta
+        paths:
+          - /pg/
     plugins:
       - name: key-auth
       - name: acl
         config:
-         allow: [anon, admin]
+          allow:
+            - admin
