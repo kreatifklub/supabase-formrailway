@@ -10,20 +10,11 @@ consumers:
     keyauth_credentials:
       - key: ${SUPABASE_SERVICE_KEY}
 
-  - username: dashboard
-
 acls:
   - consumer: anon
     group: anon
   - consumer: service_role
     group: admin
-  - consumer: dashboard
-    group: admin
-
-basicauth_credentials:
-  - consumer: dashboard
-    username: ${DASHBOARD_USERNAME}
-    password: ${DASHBOARD_PASSWORD}
 
 services:
   # ---------- AUTH ----------
