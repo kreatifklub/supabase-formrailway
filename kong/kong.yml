@@ -1,93 +1,120 @@
-_format_version: "2.1"
+_format_version: '2.1'
 _transform: true
 
-########################
-# Consumers
-########################
+###
+### Consumers / Users
+###
 consumers:
+  - username: DASHBOARD
+    basicauth_credentials:
+      - username: $DASHBOARD_USERNAME
+        password: $DASHBOARD_PASSWORD
+
   - username: anon
+    keyauth_credentials:
+      - key: $SUPABASE_ANON_KEY
+
   - username: service_role
+    keyauth_credentials:
+      - key: $SUPABASE_SERVICE_KEY
 
-########################
-# API Keys
-########################
-keyauth_credentials:
-  - consumer: anon
-    key: ${SUPABASE_ANON_KEY}
-
-  - consumer: service_role
-    key: ${SUPABASE_SERVICE_KEY}
-
-########################
-# ACL groups
-########################
+###
+### Access Control List
+###
 acls:
   - consumer: anon
     group: anon
-
   - consumer: service_role
     group: admin
 
-########################
-# Services
-########################
+###
+### API Routes
+###
 services:
-
-  # ---------- AUTH (open routes) ----------
-  - name: auth-open
-    url: http://${AUTH_HOST}:9999
+  ## Open Auth routes
+  - name: auth-v1-open
+    url: http://$AUTH_HOST:9999/verify
     routes:
-      - name: auth-open
+      - name: auth-v1-open
+        strip_path: true
         paths:
-          - /auth/v1/token
-          - /auth/v1/authorize
           - /auth/v1/verify
+    plugins:
+      - name: cors
+
+  - name: auth-v1-open-callback
+    url: http://$AUTH_HOST:9999/callback
+    routes:
+      - name: auth-v1-open-callback
+        strip_path: true
+        paths:
           - /auth/v1/callback
     plugins:
       - name: cors
 
-  # ---------- AUTH (secured routes) ----------
-  - name: auth-secure
-    url: http://${AUTH_HOST}:9999
+  - name: auth-v1-open-authorize
+    url: http://$AUTH_HOST:9999/authorize
     routes:
-      - name: auth-secure
+      - name: auth-v1-open-authorize
+        strip_path: true
+        paths:
+          - /auth/v1/authorize
+    plugins:
+      - name: cors
+
+  ## Secure Auth routes
+  - name: auth-v1
+    url: http://$AUTH_HOST:9999/
+    routes:
+      - name: auth-v1-all
+        strip_path: true
         paths:
           - /auth/v1/
     plugins:
       - name: cors
       - name: key-auth
+        config:
+          hide_credentials: false
       - name: acl
         config:
+          hide_groups_header: true
           allow:
-            - anon
             - admin
+            - anon
 
-  # ---------- REST ----------
-  - name: rest
-    url: http://${REST_HOST}:3000
+  ## Secure REST routes
+  - name: rest-v1
+    url: http://$REST_HOST:3000/
     routes:
-      - name: rest
+      - name: rest-v1-all
+        strip_path: true
         paths:
           - /rest/v1/
     plugins:
       - name: cors
       - name: key-auth
+        config:
+          hide_credentials: true
       - name: acl
         config:
+          hide_groups_header: true
           allow:
-            - anon
             - admin
+            - anon
 
-  # ---------- GRAPHQL ----------
-  - name: graphql
-    url: http://${REST_HOST}:3000/rpc/graphql
+  ## Secure GraphQL routes
+  - name: graphql-v1
+    url: http://$REST_HOST:3000/rpc/graphql
     routes:
-      - name: graphql
+      - name: graphql-v1-all
+        strip_path: true
         paths:
           - /graphql/v1
     plugins:
       - name: cors
       - name: key-auth
+        config:
+          hide_credentials: true
       - name: request-transformer
         config:
           add:
@@ -95,16 +122,18 @@ services:
               - Content-Profile:graphql_public
       - name: acl
         config:
+          hide_groups_header: true
           allow:
-            - anon
             - admin
+            - anon
 
-  # ---------- REALTIME WS ----------
-  - name: realtime-ws
-    url: http://${REALTIME_HOST}:4000/socket
+  ## Secure Realtime routes
+  - name: realtime-v1-ws
+    url: http://$REALTIME_HOST:4000/socket
     protocol: ws
     routes:
-      - name: realtime-ws
+      - name: realtime-v1-ws
+        strip_path: true
         paths:
           - /realtime/v1/
     plugins:
@@ -112,15 +141,17 @@ services:
       - name: key-auth
       - name: acl
         config:
+          hide_groups_header: true
           allow:
-            - anon
             - admin
+            - anon
 
-  # ---------- REALTIME REST ----------
-  - name: realtime-rest
-    url: http://${REALTIME_HOST}:4000/api
+  - name: realtime-v1-rest
+    url: http://$REALTIME_HOST:4000/api
+    protocol: http
     routes:
-      - name: realtime-rest
+      - name: realtime-v1-rest
+        strip_path: true
         paths:
           - /realtime/v1/api
     plugins:
@@ -128,39 +159,57 @@ services:
       - name: key-auth
       - name: acl
         config:
+          hide_groups_header: true
           allow:
-            - anon
             - admin
+            - anon
 
-  # ---------- STORAGE ----------
-  - name: storage
-    url: http://${STORAGE_HOST}:5000
+  ## Storage routes
+  - name: storage-v1
+    url: http://$STORAGE_HOST:5000/
     routes:
-      - name: storage
+      - name: storage-v1-all
+        strip_path: true
         paths:
           - /storage/v1/
     plugins:
       - name: cors
 
-  # ---------- POSTGRES META (Studio only) ----------
-  - name: meta
-    url: http://${META_HOST}:8080
+  ## Analytics routes
+  - name: analytics-v1
+    url: http://$ANALYTICS_HOST:4000/
     routes:
-      - name: meta
+      - name: analytics-v1-all
+        strip_path: true
+        paths:
+          - /analytics/v1/
+
+  ## Secure Database routes
+  - name: meta
+    url: http://$META_HOST:8080/
+    routes:
+      - name: meta-all
+        strip_path: true
         paths:
           - /pg/
     plugins:
       - name: key-auth
       - name: acl
         config:
+          hide_groups_header: true
           allow:
             - admin
 
-- name: studio
-  url: http://${STUDIO_HOST}:3000
-  routes:
-    - name: studio-root
-      paths:
-        - /
-  plugins:
-    - name: basic-auth
+  ## Supabase Studio Dashboard
+  - name: dashboard
+    url: http://$STUDIO_HOST:3000/
+    routes:
+      - name: dashboard-all
+        strip_path: true
+        paths:
+          - /
+    plugins:
+      - name: cors
+      - name: basic-auth
+        config:
+          hide_credentials: true
