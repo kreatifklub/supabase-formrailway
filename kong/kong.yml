@@ -1,39 +1,36 @@
-_format_version: '2.1'
+# kong.yml
+_format_version: "2.1"
 _transform: true
 
-###
-### Consumers / Users
-###
+# Declare your consumers (users)
 consumers:
   - username: DASHBOARD
-    basicauth_credentials:
-      - username: $DASHBOARD_USERNAME
-        password: $DASHBOARD_PASSWORD
-
   - username: anon
-    keyauth_credentials:
-      - key: $SUPABASE_ANON_KEY
-
   - username: service_role
-    keyauth_credentials:
-      - key: $SUPABASE_SERVICE_KEY
 
-###
-### Access Control List
-###
+# Declare their credentials separately
+basicauth_credentials:
+  - consumer: DASHBOARD
+    username: ${DASHBOARD_USERNAME}
+    password: ${DASHBOARD_PASSWORD}
+
+keyauth_credentials:
+  - consumer: anon
+    key: ${SUPABASE_ANON_KEY}
+  - consumer: service_role
+    key: ${SUPABASE_SERVICE_KEY}
+
+# ACL groups
 acls:
   - consumer: anon
     group: anon
   - consumer: service_role
     group: admin
 
-###
-### API Routes
-###
 services:
-  ## Open Auth routes
+  # Open Auth routes
   - name: auth-v1-open
-    url: http://$AUTH_HOST:9999/verify
+    url: http://${AUTH_HOST}:9999/verify
     routes:
       - name: auth-v1-open
         strip_path: true
@@ -43,7 +40,7 @@ services:
       - name: cors
 
   - name: auth-v1-open-callback
-    url: http://$AUTH_HOST:9999/callback
+    url: http://${AUTH_HOST}:9999/callback
     routes:
       - name: auth-v1-open-callback
         strip_path: true
@@ -53,7 +50,7 @@ services:
       - name: cors
 
   - name: auth-v1-open-authorize
-    url: http://$AUTH_HOST:9999/authorize
+    url: http://${AUTH_HOST}:9999/authorize
     routes:
       - name: auth-v1-open-authorize
         strip_path: true
@@ -62,9 +59,9 @@ services:
     plugins:
       - name: cors
 
-  ## Secure Auth routes
+  # Secure Auth routes
   - name: auth-v1
-    url: http://$AUTH_HOST:9999/
+    url: http://${AUTH_HOST}:9999/
     routes:
       - name: auth-v1-all
         strip_path: true
@@ -82,9 +79,9 @@ services:
             - admin
             - anon
 
-  ## Secure REST routes
+  # Secure REST routes
   - name: rest-v1
-    url: http://$REST_HOST:3000/
+    url: http://${REST_HOST}:3000/
     routes:
       - name: rest-v1-all
         strip_path: true
@@ -102,9 +99,9 @@ services:
             - admin
             - anon
 
-  ## Secure GraphQL routes
+  # Secure GraphQL routes
   - name: graphql-v1
-    url: http://$REST_HOST:3000/rpc/graphql
+    url: http://${REST_HOST}:3000/rpc/graphql
     routes:
       - name: graphql-v1-all
         strip_path: true
@@ -119,7 +116,7 @@ services:
         config:
           add:
             headers:
-              - Content-Profile:graphql_public
+              - Content-Profile: graphql_public
       - name: acl
         config:
           hide_groups_header: true
@@ -127,9 +124,9 @@ services:
             - admin
             - anon
 
-  ## Secure Realtime routes
+  # Secure Realtime routes (WebSocket)
   - name: realtime-v1-ws
-    url: http://$REALTIME_HOST:4000/socket
+    url: http://${REALTIME_HOST}:4000/socket
     protocol: ws
     routes:
       - name: realtime-v1-ws
@@ -146,9 +143,9 @@ services:
             - admin
             - anon
 
+  # Secure Realtime REST routes (HTTP)
   - name: realtime-v1-rest
-    url: http://$REALTIME_HOST:4000/api
-    protocol: http
+    url: http://${REALTIME_HOST}:4000/api
     routes:
       - name: realtime-v1-rest
         strip_path: true
@@ -164,9 +161,9 @@ services:
             - admin
             - anon
 
-  ## Storage routes
+  # Storage routes (no auth)
   - name: storage-v1
-    url: http://$STORAGE_HOST:5000/
+    url: http://${STORAGE_HOST}:5000/
     routes:
       - name: storage-v1-all
         strip_path: true
@@ -175,18 +172,18 @@ services:
     plugins:
       - name: cors
 
-  ## Analytics routes
+  # Analytics routes (if you run analytics)
   - name: analytics-v1
-    url: http://$ANALYTICS_HOST:4000/
+    url: http://${ANALYTICS_HOST}:4000/
     routes:
       - name: analytics-v1-all
         strip_path: true
         paths:
           - /analytics/v1/
 
-  ## Secure Database routes
+  # Secure Database routes (Postgres Meta)
   - name: meta
-    url: http://$META_HOST:8080/
+    url: http://${META_HOST}:8080/
     routes:
       - name: meta-all
         strip_path: true
@@ -200,11 +197,16 @@ services:
           allow:
             - admin
 
-  ## Supabase Studio Dashboard
+  # Supabase Studio dashboard
   - name: dashboard
-    url: http://$STUDIO_HOST:3000/
+    url: http://${STUDIO_HOST}:3000/
     routes:
       - name: dashboard-all
         strip_path: true
         paths:
           - /
+    plugins:
+      # Attach Basic Auth only to the Studio dashboard
+      - name: basic-auth
+        config:
+          hide_credentials: true
