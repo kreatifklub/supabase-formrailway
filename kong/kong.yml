@@ -110,3 +110,4 @@ services:
       - name: key-auth
       - name: acl
         config:
+         allow: [anon, admin]
