@@ -1,6 +1,9 @@
 _format_version: "2.1"
 _transform: true
 
+############################
+# Consumers
+############################
 consumers:
   - username: anon
     keyauth_credentials:
@@ -12,98 +15,169 @@ consumers:
 
   - username: dashboard
 
+############################
+# ACLs
+############################
 acls:
   - consumer: anon
     group: anon
+
   - consumer: service_role
     group: admin
+
   - consumer: dashboard
     group: admin
 
+############################
+# Dashboard auth
+############################
 basicauth_credentials:
   - consumer: dashboard
     username: ${DASHBOARD_USERNAME}
     password: ${DASHBOARD_PASSWORD}
 
+############################
+# Services & Routes
+############################
 services:
-  # ---------------- AUTH ----------------
-  - name: auth
+
+  ############################
+  # AUTH — OPEN ROUTES
+  ############################
+  - name: auth-open
     url: http://${AUTH_HOST}:9999
     routes:
-      - name: auth-route
+      - name: auth-open
         paths:
-          - /auth/v1
-        strip_path: true
+          - /auth/v1/token
+          - /auth/v1/signup
+          - /auth/v1/authorize
+          - /auth/v1/verify
+          - /auth/v1/callback
+        strip_path: false
+    plugins:
+      - name: cors
+
+  ############################
+  # AUTH — SECURE (ADMIN)
+  ############################
+  - name: auth-secure
+    url: http://${AUTH_HOST}:9999
+    routes:
+      - name: auth-secure
+        paths:
+          - /auth/v1/admin
+        strip_path: false
     plugins:
       - name: cors
       - name: key-auth
       - name: acl
         config:
-          allow: [anon, admin]
+          allow:
+            - admin
 
-  # ---------------- REST ----------------
+  ############################
+  # REST (PostgREST)
+  ############################
   - name: rest
     url: http://${REST_HOST}:3000
     routes:
-      - name: rest-route
+      - name: rest
         paths:
           - /rest/v1
-        strip_path: true
+        strip_path: false
     plugins:
       - name: cors
       - name: key-auth
       - name: acl
         config:
-          allow: [anon, admin]
+          allow:
+            - anon
+            - admin
 
-  # ---------------- REALTIME ----------------
+  ############################
+  # GRAPHQL
+  ############################
+  - name: graphql
+    url: http://${REST_HOST}:3000/rpc/graphql
+    routes:
+      - name: graphql
+        paths:
+          - /graphql/v1
+        strip_path: false
+    plugins:
+      - name: cors
+      - name: key-auth
+      - name: request-transformer
+        config:
+          add:
+            headers:
+              - Content-Profile:graphql_public
+      - name: acl
+        config:
+          allow:
+            - anon
+            - admin
+
+  ############################
+  # REALTIME
+  ############################
   - name: realtime
     url: http://${REALTIME_HOST}:4000
     routes:
-      - name: realtime-route
+      - name: realtime
         paths:
           - /realtime/v1
-        strip_path: true
+        strip_path: false
     plugins:
       - name: cors
       - name: key-auth
       - name: acl
         config:
-          allow: [anon, admin]
+          allow:
+            - anon
+            - admin
 
-  # ---------------- STORAGE ----------------
+  ############################
+  # STORAGE
+  ############################
   - name: storage
     url: http://${STORAGE_HOST}:5000
     routes:
-      - name: storage-route
+      - name: storage
         paths:
           - /storage/v1
-        strip_path: true
+        strip_path: false
     plugins:
       - name: cors
 
-  # ---------------- META ----------------
+  ############################
+  # META (pg-meta)
+  ############################
   - name: meta
     url: http://${META_HOST}:8080
     routes:
-      - name: meta-route
+      - name: meta
         paths:
           - /pg
-        strip_path: true
+        strip_path: false
     plugins:
       - name: key-auth
       - name: acl
         config:
-          allow: [admin]
+          allow:
+            - admin
 
-  # ---------------- STUDIO ----------------
+  ############################
+  # STUDIO (Dashboard)
+  ############################
   - name: studio
     url: http://${STUDIO_HOST}:3000
     routes:
-      - name: studio-route
+      - name: studio
         paths:
           - /
-        strip_path: true
+        strip_path: false
     plugins:
       - name: basic-auth
       - name: cors
