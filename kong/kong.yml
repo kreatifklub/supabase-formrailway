@@ -2,33 +2,38 @@ _format_version: "2.1"
 _transform: true
 
 consumers:
-  - username: dashboard
   - username: anon
+    keyauth_credentials:
+      - key: ${SUPABASE_ANON_KEY}
+
   - username: service_role
+    keyauth_credentials:
+      - key: ${SUPABASE_SERVICE_KEY}
 
-basicauth_credentials:
-  - consumer: dashboard
-    username: ${DASHBOARD_USERNAME}
-    password: ${DASHBOARD_PASSWORD}
-
-keyauth_credentials:
-  - consumer: anon
-    key: ${SUPABASE_ANON_KEY}
-  - consumer: service_role
-    key: ${SUPABASE_SERVICE_KEY}
+  - username: dashboard
 
 acls:
   - consumer: anon
     group: anon
   - consumer: service_role
     group: admin
+  - consumer: dashboard
+    group: admin
+
+basicauth_credentials:
+  - consumer: dashboard
+    username: ${DASHBOARD_USERNAME}
+    password: ${DASHBOARD_PASSWORD}
 
 services:
-  # ---------- AUTH ----------
+  # ---------------- AUTH ----------------
   - name: auth
     url: http://${AUTH_HOST}:9999
     routes:
-      - paths: ["/auth/v1"]
+      - name: auth-route
+        paths:
+          - /auth/v1
+        strip_path: true
     plugins:
       - name: cors
       - name: key-auth
@@ -36,11 +41,14 @@ services:
         config:
           allow: [anon, admin]
 
-  # ---------- REST ----------
+  # ---------------- REST ----------------
   - name: rest
     url: http://${REST_HOST}:3000
     routes:
-      - paths: ["/rest/v1"]
+      - name: rest-route
+        paths:
+          - /rest/v1
+        strip_path: true
     plugins:
       - name: cors
       - name: key-auth
@@ -48,29 +56,54 @@ services:
         config:
           allow: [anon, admin]
 
-  # ---------- REALTIME ----------
+  # ---------------- REALTIME ----------------
   - name: realtime
     url: http://${REALTIME_HOST}:4000
     routes:
-      - paths: ["/realtime/v1"]
+      - name: realtime-route
+        paths:
+          - /realtime/v1
+        strip_path: true
     plugins:
+      - name: cors
       - name: key-auth
       - name: acl
         config:
           allow: [anon, admin]
 
-  # ---------- STORAGE ----------
+  # ---------------- STORAGE ----------------
   - name: storage
     url: http://${STORAGE_HOST}:5000
     routes:
-      - paths: ["/storage/v1"]
+      - name: storage-route
+        paths:
+          - /storage/v1
+        strip_path: true
     plugins:
       - name: cors
 
-  # ---------- STUDIO (BASIC AUTH ONLY) ----------
+  # ---------------- META ----------------
+  - name: meta
+    url: http://${META_HOST}:8080
+    routes:
+      - name: meta-route
+        paths:
+          - /pg
+        strip_path: true
+    plugins:
+      - name: key-auth
+      - name: acl
+        config:
+          allow: [admin]
+
+  # ---------------- STUDIO ----------------
   - name: studio
     url: http://${STUDIO_HOST}:3000
     routes:
-      - paths: ["/"]
+      - name: studio-route
+        paths:
+          - /
+        strip_path: true
     plugins:
       - name: basic-auth
+      - name: cors
