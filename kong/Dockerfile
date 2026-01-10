@@ -7,7 +7,5 @@ COPY kong.yml /home/kong/kong.template.yml
 
 USER kong
 
-ENTRYPOINT sh -c "\
-  envsubst < /home/kong/kong.template.yml > /home/kong/kong.yml && \
-  kong start \
-"
+ENTRYPOINT ["/bin/sh", "-c"]
+CMD ["envsubst < /home/kong/kong.template.yml > /home/kong/kong.yml && exec /docker-entrypoint.sh kong docker-start"]
